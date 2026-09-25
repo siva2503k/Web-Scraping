@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMDb Top 250 Scraper & Analytics Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <span class="imdb-badge">IMDb</span>
+        <div class="brand-text">
+          <span class="brand-title">Top 250 Scraper</span>
+          <span class="brand-sub">Selenium & Chrome Automation</span>
+        </div>
+      </div>
+      
+      <div class="nav-status-group">
+        <div class="status-indicator-pill" id="globalStatusPill">
+          <span class="status-dot idle" id="globalStatusDot"></span>
+          <span id="globalStatusText">Ready</span>
+        </div>
+        <a href="#scraper-section" class="btn btn-sm btn-outline">
+          <i class="fa-solid fa-terminal"></i> Console
+        </a>
+        <a href="https://www.imdb.com/chart/top/" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-ghost">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> IMDb Source
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-wrapper">
+    <!-- Hero Banner -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="badge-tag"><i class="fa-solid fa-wand-magic-sparkles"></i> Live Dynamic Web Scraper</div>
+        <h1 class="hero-title">IMDb Top 250 Movies Intelligence</h1>
+        <p class="hero-description">
+          An automated data-mining web application powered by <strong>Python, Selenium WebDriver, Chrome, pandas,</strong> and <strong>Flask</strong>. 
+          Extracts rankings, ratings, metadata, and visuals with anti-bot stealth bypass.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="downloadCsvBtn" class="btn btn-gold btn-lg">
+          <i class="fa-solid fa-file-arrow-down"></i> Download CSV
+        </button>
+      </div>
+    </section>
+
+    <!-- Scraper Control Panel -->
+    <section class="card scraper-card" id="scraper-section">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fa-solid fa-sliders text-gold"></i>
+          <h2>Scraper Controls & Engine Status</h2>
+        </div>
+        <div class="scraper-toggles">
+          <label class="toggle-switch-label" title="Toggle headless mode on or off">
+            <span class="toggle-text">Headless Mode</span>
+            <input type="checkbox" id="headlessToggle" checked>
+            <span class="slider round"></span>
+            <span class="toggle-state-badge" id="headlessStateBadge">ON</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="control-actions-row">
+          <div class="buttons-group">
+            <button id="startScrapeBtn" class="btn btn-gold">
+              <i class="fa-solid fa-play"></i> Start Scraping
+            </button>
+            <button id="stopScrapeBtn" class="btn btn-danger" disabled>
+              <i class="fa-solid fa-stop"></i> Stop Scraping
+            </button>
+            <button id="refreshDataBtn" class="btn btn-outline" title="Reload cached data">
+              <i class="fa-solid fa-rotate"></i> Reload Table
+            </button>
+          </div>
+
+          <div class="scrape-meta-info">
+            <span class="meta-item">
+              <i class="fa-regular fa-clock"></i> Last Updated: <strong id="lastUpdatedText">Loading...</strong>
+            </span>
+            <span class="meta-item">
+              <i class="fa-solid fa-database"></i> Cached Movies: <strong id="cachedCountText">0</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Live Progress Container -->
+        <div class="progress-section" id="progressSection">
+          <div class="progress-header">
+            <div class="progress-label-wrap">
+              <span class="spinner-small" id="progressSpinner" style="display: none;"></span>
+              <span class="progress-label" id="progressMessage">Waiting for scraper initiation...</span>
+            </div>
+            <div class="progress-numbers">
+              <span class="progress-fraction" id="progressFraction">0 / 250</span>
+              <span class="progress-percent" id="progressPercent">0%</span>
+            </div>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Alert Notification Box -->
+        <div class="alert-box" id="alertBox" style="display: none;">
+          <i class="fa-solid fa-circle-info alert-icon" id="alertIcon"></i>
+          <span class="alert-message" id="alertMessage"></span>
+          <button class="alert-close" id="alertCloseBtn">&times;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistics Metrics Grid -->
+    <section class="stats-grid">
+      <!-- Card 1: Total Movies -->
+      <div class="stat-card">
+        <div class="stat-icon-wrap gold-icon">
+          <i class="fa-solid fa-film"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Total Scraped</span>
+          <span class="stat-value" id="statTotalMovies">0</span>
+          <span class="stat-subtext">IMDb Top Chart Entries</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Average Rating -->
+      <div class="stat-card">
+        <div class="stat-icon-wrap star-icon">
+          <i class="fa-solid fa-star"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Average IMDb Rating</span>
+          <span class="stat-value" id="statAvgRating">0.0</span>
+          <span class="stat-subtext">Across all ranked films</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Highest Rated -->
+      <div class="stat-card">
+        <div class="stat-icon-wrap crown-icon">
+          <i class="fa-solid fa-crown"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Highest Rated</span>
+          <span class="stat-value stat-truncate" id="statHighestRated">-</span>
+          <span class="stat-subtext" id="statHighestRatingSub">Rating: -</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Lowest Rated in 250 -->
+      <div class="stat-card">
+        <div class="stat-icon-wrap chart-icon">
+          <i class="fa-solid fa-arrow-down-short-wide"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Lowest in Top 250</span>
+          <span class="stat-value stat-truncate" id="statLowestRated">-</span>
+          <span class="stat-subtext" id="statLowestRatingSub">Rating: -</span>
+        </div>
+      </div>
+
+      <!-- Card 5: Release Year Range -->
+      <div class="stat-card">
+        <div class="stat-icon-wrap calendar-icon">
+          <i class="fa-regular fa-calendar-days"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Latest Release Year</span>
+          <span class="stat-value" id="statLatestYear">-</span>
+          <span class="stat-subtext" id="statYearRangeSub">Oldest: -</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizations & Charts -->
+    <section class="charts-grid">
+      <!-- Chart 1: Rating Distribution -->
+      <div class="card chart-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-chart-column text-gold"></i>
+            <h3>Rating Distribution</h3>
+          </div>
+          <span class="card-badge">Histogram</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="ratingDistChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Movies by Decade -->
+      <div class="card chart-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-timeline text-gold"></i>
+            <h3>Movies by Era / Decade</h3>
+          </div>
+          <span class="card-badge">Decade Analysis</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="decadeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Top 10 Ranked Movies -->
+      <div class="card chart-card full-width-chart">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-ranking-star text-gold"></i>
+            <h3>Top 10 Highest Rated Movies</h3>
+          </div>
+          <span class="card-badge">Hall of Fame</span>
+        </div>
+        <div class="chart-container-horizontal">
+          <canvas id="topMoviesChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Movie Table & Filter Section -->
+    <section class="card table-card" id="tableSection">
+      <div class="card-header flex-wrap">
+        <div class="card-title">
+          <i class="fa-solid fa-list-ol text-gold"></i>
+          <h2>Top 250 Movie Directory</h2>
+          <span class="count-pill" id="filteredCountBadge">Showing 0 movies</span>
+        </div>
+
+        <div class="table-actions">
+          <button id="downloadCsvBtnSecondary" class="btn btn-sm btn-gold">
+            <i class="fa-solid fa-download"></i> CSV Export
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls Toolbar -->
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="searchInput" placeholder="Search by movie title or release year..." autocomplete="off">
+          <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">&times;</button>
+        </div>
+
+        <div class="filter-controls-group">
+          <!-- Quick Filter Buttons -->
+          <div class="filter-chips">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="rating-9">9.0+ Masters</button>
+            <button class="chip" data-filter="recent-2000">2000s & Newer</button>
+            <button class="chip" data-filter="classics">Classics (&lt;1980)</button>
+          </div>
+
+          <!-- Sort Select -->
+          <div class="select-group">
+            <label for="sortSelect"><i class="fa-solid fa-arrow-down-a-z"></i> Sort:</label>
+            <select id="sortSelect" class="custom-select">
+              <option value="rank-asc">Rank: #1 to #250</option>
+              <option value="rank-desc">Rank: #250 to #1</option>
+              <option value="rating-desc">Rating: Highest First</option>
+              <option value="rating-asc">Rating: Lowest First</option>
+              <option value="year-desc">Year: Newest First</option>
+              <option value="year-asc">Year: Oldest First</option>
+              <option value="title-asc">Title: A to Z</option>
+            </select>
+          </div>
+
+          <!-- Rows per page -->
+          <div class="select-group">
+            <label for="pageSizeSelect">Show:</label>
+            <select id="pageSizeSelect" class="custom-select">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="250">All (250)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movies Table Responsive Container -->
+      <div class="table-responsive">
+        <table class="movie-table" id="movieTable">
+          <thead>
+            <tr>
+              <th class="col-rank sortable" data-sort="rank">Rank <i class="fa-solid fa-sort"></i></th>
+              <th class="col-poster">Poster</th>
+              <th class="col-title sortable" data-sort="title">Title <i class="fa-solid fa-sort"></i></th>
+              <th class="col-year sortable" data-sort="year">Year <i class="fa-solid fa-sort"></i></th>
+              <th class="col-meta">Runtime / Cert</th>
+              <th class="col-rating sortable" data-sort="rating">IMDb Rating <i class="fa-solid fa-sort"></i></th>
+              <th class="col-votes">Votes</th>
+              <th class="col-action">Details</th>
+            </tr>
+          </thead>
+          <tbody id="movieTableBody">
+            <!-- Dynamically populated via script.js -->
+            <tr>
+              <td colspan="8" class="empty-table-cell">
+                <div class="empty-state">
+                  <i class="fa-solid fa-spinner fa-spin empty-icon"></i>
+                  <p>Loading IMDb Top 250 movies data...</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="table-footer">
+        <div class="pagination-info" id="paginationInfo">
+          Showing <strong>1</strong> to <strong>25</strong> of <strong>250</strong> movies
+        </div>
+        <div class="pagination-controls" id="paginationControls">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Movie Details Modal Dialog -->
+  <div class="modal-backdrop" id="movieModalBackdrop">
+    <div class="modal-card" id="movieModalCard">
+      <button class="modal-close-btn" id="modalCloseBtn" aria-label="Close modal">&times;</button>
+      
+      <div class="modal-body">
+        <div class="modal-poster-wrap">
+          <img id="modalPoster" src="" alt="Movie Poster" class="modal-poster-img" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22140%22 height=%22207%22 viewBox=%220 0 140 207%22><rect width=%22140%22 height=%22207%22 fill=%22%2321262d%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%238b949e%22 font-size=%2214%22>No Poster</text></svg>'">
+        </div>
+
+        <div class="modal-details">
+          <div class="modal-header-badges">
+            <span class="badge-rank" id="modalRank">#1</span>
+            <span class="badge-cert" id="modalCert">PG-13</span>
+            <span class="badge-year" id="modalYear">1994</span>
+          </div>
+
+          <h2 class="modal-title" id="modalTitle">Movie Title</h2>
+
+          <div class="modal-rating-row">
+            <div class="modal-star-rating">
+              <i class="fa-solid fa-star text-gold"></i>
+              <span class="modal-rating-score" id="modalRating">9.3</span>
+              <span class="modal-rating-scale">/ 10</span>
+            </div>
+            <div class="modal-votes">
+              <i class="fa-solid fa-users"></i>
+              <span id="modalVotes">3.2M votes</span>
+            </div>
+            <div class="modal-runtime">
+              <i class="fa-regular fa-clock"></i>
+              <span id="modalDuration">2h 22m</span>
+            </div>
+          </div>
+
+          <div class="modal-desc-box">
+            <h4>Overview & Details</h4>
+            <p id="modalDesc">
+              Ranked among the greatest cinematic achievements in history according to global IMDb voters.
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <a id="modalImdbLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-gold">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open on IMDb.com
+            </a>
+            <button class="btn btn-outline" id="modalDismissBtn">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toastNotification">
+    <i class="fa-solid fa-circle-check toast-icon" id="toastIcon"></i>
+    <span class="toast-message" id="toastMessage">Notification message</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="imdb-badge-small">IMDb</span> Top 250 Scraper &amp; Analytics Web App
+      </div>
+      <div class="footer-stack">
+        <span>Built with Python &bull; Flask &bull; Selenium WebDriver &bull; Chrome &bull; pandas &bull; Chart.js</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main JavaScript App -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
